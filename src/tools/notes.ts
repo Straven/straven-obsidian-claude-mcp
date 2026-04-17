@@ -336,5 +336,54 @@ export class NotesTools {
         }
       },
     );
+
+    // vault_get_properties
+    mcp.tool(
+      'vault_get_properties',
+      'Read all frontmatter properties from a note.',
+      { path: z.string().describe('Vault-relative path') },
+      async ({ path: rawPath }: { path: string }) => {
+        try {
+          const filePath = resolvePath(rawPath);
+          const abstract = this.app.vault.getAbstractFileByPath(filePath);
+          if (!abstract || !('extension' in abstract)) {
+            throw new VaultError('FILE_NOT_FOUND', `File not found: ${filePath}`);
+          }
+          const file = abstract as TFile;
+          const cache = this.app.metadataCache.getFileCache(file);
+          const properties = cache?.frontmatter ?? {};
+          return { content: [{ type: 'text' as const, text: JSON.stringify({ path: filePath, properties }) }] };
+        } catch (e) {
+          return errorResponse(wrap(e));
+        }
+      },
+    );
+
+    // vault_set_property
+    mcp.tool(
+      'vault_set_property',
+      'Write a single frontmatter property. Creates the property if it does not exist.',
+      {
+        path: z.string().describe('Vault-relative path'),
+        key: z.string().describe('Property key'),
+        value: z.unknown().describe('Property value (string, number, boolean, or array)'),
+      },
+      async ({ path: rawPath, key, value }: { path: string; key: string; value: unknown }) => {
+        try {
+          const filePath = resolvePath(rawPath);
+          const abstract = this.app.vault.getAbstractFileByPath(filePath);
+          if (!abstract || !('extension' in abstract)) {
+            throw new VaultError('FILE_NOT_FOUND', `File not found: ${filePath}`);
+          }
+          const file = abstract as TFile;
+          await this.app.fileManager.processFrontMatter(file, (fm) => {
+            fm[key] = value;
+          });
+          return { content: [{ type: 'text' as const, text: JSON.stringify({ path: filePath, key, updated: true }) }] };
+        } catch (e) {
+          return errorResponse(wrap(e));
+        }
+      },
+    );
   }
 }

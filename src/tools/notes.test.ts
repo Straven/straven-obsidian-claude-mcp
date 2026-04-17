@@ -439,3 +439,85 @@ Content of B.
     expect(data.error.code).toBe('HEADING_NOT_FOUND');
   });
 });
+
+describe('vault_get_properties', () => {
+  let app: App;
+  let mcp: ReturnType<typeof makeMcp>;
+
+  beforeEach(() => {
+    app = {
+      vault: {
+        getFolderByPath: vi.fn(),
+        getAbstractFileByPath: vi.fn((p: string) => (p === 'note.md' ? mockFile('note.md') : null)),
+        getFiles: vi.fn(),
+        read: vi.fn(),
+        create: vi.fn(),
+        modify: vi.fn(),
+        delete: vi.fn(),
+        adapter: { read: vi.fn(), write: vi.fn() },
+      },
+      metadataCache: {
+        getFileCache: vi.fn(() => ({ frontmatter: { title: 'My Note', tags: ['a', 'b'], done: false } })),
+        on: vi.fn(),
+      },
+      fileManager: { processFrontMatter: vi.fn() },
+    } as unknown as App;
+    mcp = makeMcp();
+    new NotesTools(app).register(mcp as unknown as McpServer);
+  });
+
+  it('returns all frontmatter properties', async () => {
+    const result = await mcp.call('vault_get_properties', { path: 'note.md' }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.properties).toEqual({ title: 'My Note', tags: ['a', 'b'], done: false });
+  });
+
+  it('returns FILE_NOT_FOUND for missing file', async () => {
+    const result = await mcp.call('vault_get_properties', { path: 'missing.md' }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.error.code).toBe('FILE_NOT_FOUND');
+  });
+});
+
+describe('vault_set_property', () => {
+  let app: App;
+  let mcp: ReturnType<typeof makeMcp>;
+  let capturedFm: Record<string, unknown>;
+
+  beforeEach(() => {
+    capturedFm = {};
+    app = {
+      vault: {
+        getFolderByPath: vi.fn(),
+        getAbstractFileByPath: vi.fn((p: string) => (p === 'note.md' ? mockFile('note.md') : null)),
+        getFiles: vi.fn(),
+        read: vi.fn(),
+        create: vi.fn(),
+        modify: vi.fn(),
+        delete: vi.fn(),
+        adapter: { read: vi.fn(), write: vi.fn() },
+      },
+      metadataCache: { getFileCache: vi.fn(), on: vi.fn() },
+      fileManager: {
+        processFrontMatter: vi.fn(async (_f: TFile, fn: (fm: Record<string, unknown>) => void) => {
+          fn(capturedFm);
+        }),
+      },
+    } as unknown as App;
+    mcp = makeMcp();
+    new NotesTools(app).register(mcp as unknown as McpServer);
+  });
+
+  it('sets a frontmatter property', async () => {
+    const result = await mcp.call('vault_set_property', { path: 'note.md', key: 'status', value: 'done' }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.path).toBe('note.md');
+    expect(capturedFm['status']).toBe('done');
+  });
+
+  it('returns FILE_NOT_FOUND for missing file', async () => {
+    const result = await mcp.call('vault_set_property', { path: 'missing.md', key: 'x', value: '1' }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.error.code).toBe('FILE_NOT_FOUND');
+  });
+});
