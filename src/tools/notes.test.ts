@@ -307,6 +307,29 @@ describe('vault_search', () => {
     expect(data.matches).toHaveLength(20);
     expect(data.truncated).toBe(true);
   });
+
+  it('sets truncated=true and stops after timeout fires', async () => {
+    vi.useFakeTimers();
+    // Create 5 files but read takes "long" — we advance timers mid-search
+    const slowFiles = Array.from({ length: 5 }, (_, i) => mockFile(`slow${i}.md`));
+    (app.vault.getFiles as ReturnType<typeof vi.fn>).mockReturnValue(slowFiles);
+    let readCount = 0;
+    (app.vault.read as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      readCount++;
+      return 'apple content';
+    });
+
+    const promise = mcp.call('vault_search', { query: 'apple', timeout_ms: 100 }) as Promise<{ content: { text: string }[] }>;
+    // Advance timers to fire the timeout
+    vi.advanceTimersByTime(200);
+    const result = await promise;
+    vi.useRealTimers();
+
+    const data = JSON.parse(result.content[0].text);
+    expect(data.truncated).toBe(true);
+    // Should not have processed all 5 files (timeout fired)
+    expect(readCount).toBeLessThan(5);
+  });
 });
 
 describe('vault_append', () => {

@@ -81,7 +81,7 @@ Codes: `VAULT_NOT_READY` `FILE_NOT_FOUND` `FILE_EXISTS` `INVALID_PATH`
 
 ## vault_patch Rules
 
-Heading match is exact text, no `#` prefix, **CASE-SENSITIVE**, special chars literal.
+Heading match is exact text, includes `#` prefix (e.g. `## My Heading`), **CASE-SENSITIVE**, special chars literal.
 `heading_level` default: first occurrence.
 
 ## canvas_create_dashboard Coordinates
