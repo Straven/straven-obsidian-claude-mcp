@@ -1,7 +1,7 @@
 {
   "id": "straven-obsidian-mcp",
   "name": "Straven Obsidian MCP",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "minAppVersion": "1.7.0",
   "description": "Connect Claude to your Obsidian vault via MCP — read, write, and organize notes and canvases",
   "author": "Straven",
