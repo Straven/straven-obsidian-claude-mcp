@@ -132,3 +132,121 @@ describe('vault_read', () => {
     expect(data.error.code).toBe('FILE_NOT_FOUND');
   });
 });
+
+// ── vault_create ──────────────────────────────────────────────────────────────
+
+describe('vault_create', () => {
+  let app: App;
+  let mcp: ReturnType<typeof makeMcp>;
+
+  beforeEach(() => {
+    app = {
+      vault: {
+        getFolderByPath: vi.fn(),
+        getAbstractFileByPath: vi.fn(() => null),
+        getFiles: vi.fn(),
+        read: vi.fn(),
+        create: vi.fn(async (path: string) => mockFile(path)),
+        modify: vi.fn(),
+        delete: vi.fn(),
+        adapter: { read: vi.fn(), write: vi.fn() },
+      },
+      metadataCache: { getFileCache: vi.fn(), on: vi.fn() },
+      fileManager: { processFrontMatter: vi.fn() },
+    } as unknown as App;
+    mcp = makeMcp();
+    new NotesTools(app).register(mcp as unknown as McpServer);
+  });
+
+  it('creates a new note', async () => {
+    const result = await mcp.call('vault_create', { path: 'new.md', content: '# New' }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.path).toBe('new.md');
+    expect(app.vault.create).toHaveBeenCalledWith('new.md', '# New');
+  });
+
+  it('returns FILE_EXISTS when file already present', async () => {
+    (app.vault.getAbstractFileByPath as ReturnType<typeof vi.fn>).mockReturnValue(mockFile('new.md'));
+    const result = await mcp.call('vault_create', { path: 'new.md', content: '' }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.error.code).toBe('FILE_EXISTS');
+  });
+});
+
+// ── vault_update ──────────────────────────────────────────────────────────────
+
+describe('vault_update', () => {
+  let app: App;
+  let mcp: ReturnType<typeof makeMcp>;
+
+  beforeEach(() => {
+    app = {
+      vault: {
+        getFolderByPath: vi.fn(),
+        getAbstractFileByPath: vi.fn((p: string) => (p === 'note.md' ? mockFile('note.md') : null)),
+        getFiles: vi.fn(),
+        read: vi.fn(),
+        create: vi.fn(),
+        modify: vi.fn(async () => undefined),
+        delete: vi.fn(),
+        adapter: { read: vi.fn(), write: vi.fn() },
+      },
+      metadataCache: { getFileCache: vi.fn(), on: vi.fn() },
+      fileManager: { processFrontMatter: vi.fn() },
+    } as unknown as App;
+    mcp = makeMcp();
+    new NotesTools(app).register(mcp as unknown as McpServer);
+  });
+
+  it('updates an existing note', async () => {
+    const result = await mcp.call('vault_update', { path: 'note.md', content: '# Updated' }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.path).toBe('note.md');
+    expect(app.vault.modify).toHaveBeenCalledWith(mockFile('note.md'), '# Updated');
+  });
+
+  it('returns FILE_NOT_FOUND for missing note', async () => {
+    const result = await mcp.call('vault_update', { path: 'missing.md', content: '' }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.error.code).toBe('FILE_NOT_FOUND');
+  });
+});
+
+// ── vault_delete ──────────────────────────────────────────────────────────────
+
+describe('vault_delete', () => {
+  let app: App;
+  let mcp: ReturnType<typeof makeMcp>;
+
+  beforeEach(() => {
+    app = {
+      vault: {
+        getFolderByPath: vi.fn(),
+        getAbstractFileByPath: vi.fn((p: string) => (p === 'note.md' ? mockFile('note.md') : null)),
+        getFiles: vi.fn(),
+        read: vi.fn(),
+        create: vi.fn(),
+        modify: vi.fn(),
+        delete: vi.fn(async () => undefined),
+        adapter: { read: vi.fn(), write: vi.fn() },
+      },
+      metadataCache: { getFileCache: vi.fn(), on: vi.fn() },
+      fileManager: { processFrontMatter: vi.fn() },
+    } as unknown as App;
+    mcp = makeMcp();
+    new NotesTools(app).register(mcp as unknown as McpServer);
+  });
+
+  it('deletes a note', async () => {
+    const result = await mcp.call('vault_delete', { path: 'note.md' }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.deleted).toBe(true);
+    expect(app.vault.delete).toHaveBeenCalled();
+  });
+
+  it('returns FILE_NOT_FOUND for missing note', async () => {
+    const result = await mcp.call('vault_delete', { path: 'missing.md' }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.error.code).toBe('FILE_NOT_FOUND');
+  });
+});

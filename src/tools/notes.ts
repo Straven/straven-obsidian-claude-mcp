@@ -117,5 +117,68 @@ export class NotesTools {
         }
       },
     );
+
+    // vault_create
+    mcp.tool(
+      'vault_create',
+      'Create a new note. Fails if the file already exists.',
+      {
+        path: z.string().describe('Vault-relative path, e.g. "Projects/new-note.md"'),
+        content: z.string().default('').describe('Initial markdown content'),
+      },
+      async ({ path: rawPath, content }: { path: string; content: string }) => {
+        try {
+          const filePath = resolvePath(rawPath);
+          if (this.app.vault.getAbstractFileByPath(filePath)) {
+            throw new VaultError('FILE_EXISTS', `File already exists: ${filePath}`);
+          }
+          await this.app.vault.create(filePath, content);
+          return { content: [{ type: 'text' as const, text: JSON.stringify({ path: filePath, created: true }) }] };
+        } catch (e) {
+          return errorResponse(wrap(e));
+        }
+      },
+    );
+
+    // vault_update
+    mcp.tool(
+      'vault_update',
+      'Replace the full content of an existing note.',
+      {
+        path: z.string().describe('Vault-relative path'),
+        content: z.string().describe('New markdown content (replaces entire file)'),
+      },
+      async ({ path: rawPath, content }: { path: string; content: string }) => {
+        try {
+          const filePath = resolvePath(rawPath);
+          const abstract = this.app.vault.getAbstractFileByPath(filePath);
+          if (!abstract || !('extension' in abstract)) {
+            throw new VaultError('FILE_NOT_FOUND', `File not found: ${filePath}`);
+          }
+          await this.app.vault.modify(abstract as TFile, content);
+          return { content: [{ type: 'text' as const, text: JSON.stringify({ path: filePath, updated: true }) }] };
+        } catch (e) {
+          return errorResponse(wrap(e));
+        }
+      },
+    );
+
+    // vault_delete
+    mcp.tool(
+      'vault_delete',
+      'Delete a file from the vault.',
+      { path: z.string().describe('Vault-relative path') },
+      async ({ path: rawPath }: { path: string }) => {
+        try {
+          const filePath = resolvePath(rawPath);
+          const abstract = this.app.vault.getAbstractFileByPath(filePath);
+          if (!abstract) throw new VaultError('FILE_NOT_FOUND', `File not found: ${filePath}`);
+          await this.app.vault.delete(abstract);
+          return { content: [{ type: 'text' as const, text: JSON.stringify({ path: filePath, deleted: true }) }] };
+        } catch (e) {
+          return errorResponse(wrap(e));
+        }
+      },
+    );
   }
 }
