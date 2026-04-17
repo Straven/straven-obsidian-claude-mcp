@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "minAppVersion": "1.7.0",
   "description": "MCP server for Claude — notes, canvas, and bases",
-  "author": "mykolasarry",
-  "authorUrl": "https://github.com/mykolasarry",
+  "author": "Straven",
+  "authorUrl": "https://github.com/straven",
   "isDesktopOnly": true
 }

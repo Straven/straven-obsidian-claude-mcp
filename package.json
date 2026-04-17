@@ -8,7 +8,7 @@
     "dev": "node esbuild.config.mjs",
     "test": "vitest run"
   },
-  "author": "mykolasarry",
+  "author": "Straven",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.0.0",
