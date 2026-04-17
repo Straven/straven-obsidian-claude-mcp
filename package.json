@@ -1,7 +1,7 @@
 {
-  "name": "straven-mcp",
+  "name": "straven-obsidian-mcp",
   "version": "0.1.0",
-  "description": "MCP server for Claude — notes, canvas, and bases",
+  "description": "Connect Claude to your Obsidian vault via MCP — read, write, and organize notes and canvases",
   "main": "main.js",
   "scripts": {
     "build": "node esbuild.config.mjs production",
