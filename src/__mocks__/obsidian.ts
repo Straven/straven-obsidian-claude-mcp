@@ -1,4 +1,6 @@
-export class Plugin {}
+export class Plugin {
+  app!: App;
+}
 export class Notice {
   constructor(public message: string) {}
 }

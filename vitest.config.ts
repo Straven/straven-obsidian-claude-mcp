@@ -1,4 +1,8 @@
 import { defineConfig } from 'vitest/config';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   test: {
@@ -7,7 +11,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      obsidian: '/Users/mykolasarry/Projects/straven-obsidian-claude-mcp/src/__mocks__/obsidian.ts',
+      obsidian: path.resolve(__dirname, 'src/__mocks__/obsidian.ts'),
     },
   },
 });
