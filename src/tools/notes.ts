@@ -180,5 +180,48 @@ export class NotesTools {
         }
       },
     );
+
+    // vault_search
+    mcp.tool(
+      'vault_search',
+      'Full-text search across all vault notes. Returns up to 20 matches. May return truncated results if vault is large.',
+      {
+        query: z.string().describe('Text to search for (case-insensitive)'),
+        timeout_ms: z.number().optional().default(5000).describe('Search timeout in milliseconds (default 5000)'),
+      },
+      async ({ query, timeout_ms }: { query: string; timeout_ms: number }) => {
+        try {
+          const files = this.app.vault.getFiles();
+          const lowerQuery = query.toLowerCase();
+          const matches: { path: string; excerpt: string }[] = [];
+          let truncated = false;
+
+          const searchPromise = (async () => {
+            for (const file of files) {
+              const content = await this.app.vault.read(file);
+              if (content.toLowerCase().includes(lowerQuery)) {
+                const idx = content.toLowerCase().indexOf(lowerQuery);
+                const start = Math.max(0, idx - 60);
+                const end = Math.min(content.length, idx + query.length + 60);
+                matches.push({ path: file.path, excerpt: content.slice(start, end).trim() });
+                if (matches.length >= 20) { truncated = true; break; }
+              }
+            }
+          })();
+
+          const timeoutPromise = new Promise<void>((resolve) =>
+            setTimeout(() => { truncated = true; resolve(); }, timeout_ms),
+          );
+
+          await Promise.race([searchPromise, timeoutPromise]);
+
+          return {
+            content: [{ type: 'text' as const, text: JSON.stringify({ query, matches, truncated }) }],
+          };
+        } catch (e) {
+          return errorResponse(wrap(e));
+        }
+      },
+    );
   }
 }

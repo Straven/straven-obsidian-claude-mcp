@@ -250,3 +250,50 @@ describe('vault_delete', () => {
     expect(data.error.code).toBe('FILE_NOT_FOUND');
   });
 });
+
+describe('vault_search', () => {
+  let app: App;
+  let mcp: ReturnType<typeof makeMcp>;
+
+  beforeEach(() => {
+    const files = [
+      mockFile('a.md'),
+      mockFile('b.md'),
+      mockFile('c.md'),
+    ];
+    app = {
+      vault: {
+        getFolderByPath: vi.fn(),
+        getAbstractFileByPath: vi.fn(),
+        getFiles: vi.fn(() => files),
+        read: vi.fn(async (f: TFile) => {
+          if (f.path === 'a.md') return '# Apple\nThis has the keyword apple';
+          if (f.path === 'b.md') return '# Banana\nNo match here';
+          return '# Cherry\napple is here too';
+        }),
+        create: vi.fn(),
+        modify: vi.fn(),
+        delete: vi.fn(),
+        adapter: { read: vi.fn(), write: vi.fn() },
+      },
+      metadataCache: { getFileCache: vi.fn(), on: vi.fn() },
+      fileManager: { processFrontMatter: vi.fn() },
+    } as unknown as App;
+    mcp = makeMcp();
+    new NotesTools(app).register(mcp as unknown as McpServer);
+  });
+
+  it('finds files containing the query', async () => {
+    const result = await mcp.call('vault_search', { query: 'apple' }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.matches).toHaveLength(2);
+    expect(data.matches.map((m: { path: string }) => m.path)).toContain('a.md');
+    expect(data.matches.map((m: { path: string }) => m.path)).toContain('c.md');
+  });
+
+  it('returns empty matches for no results', async () => {
+    const result = await mcp.call('vault_search', { query: 'zzznomatch' }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.matches).toHaveLength(0);
+  });
+});
