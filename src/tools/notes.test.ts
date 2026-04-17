@@ -348,3 +348,83 @@ describe('vault_append', () => {
     expect(data.error.code).toBe('FILE_NOT_FOUND');
   });
 });
+
+describe('vault_patch', () => {
+  let app: App;
+  let mcp: ReturnType<typeof makeMcp>;
+  let capturedContent: string;
+
+  const INITIAL = `# Title
+
+## Section A
+
+Content of A.
+
+## Section B
+
+Content of B.
+`;
+
+  beforeEach(() => {
+    capturedContent = '';
+    app = {
+      vault: {
+        getFolderByPath: vi.fn(),
+        getAbstractFileByPath: vi.fn((p: string) => (p === 'note.md' ? mockFile('note.md') : null)),
+        getFiles: vi.fn(),
+        read: vi.fn(async () => INITIAL),
+        create: vi.fn(),
+        modify: vi.fn(async (_f: TFile, c: string) => { capturedContent = c; }),
+        delete: vi.fn(),
+        adapter: { read: vi.fn(), write: vi.fn() },
+      },
+      metadataCache: { getFileCache: vi.fn(), on: vi.fn() },
+      fileManager: { processFrontMatter: vi.fn() },
+    } as unknown as App;
+    mcp = makeMcp();
+    new NotesTools(app).register(mcp as unknown as McpServer);
+  });
+
+  it('replaces section content under a heading', async () => {
+    await mcp.call('vault_patch', {
+      path: 'note.md',
+      heading: '## Section A',
+      mode: 'replace',
+      content: 'Replaced A content.',
+    });
+    expect(capturedContent).toContain('## Section A\n\nReplaced A content.');
+    expect(capturedContent).toContain('## Section B');
+    expect(capturedContent).not.toContain('Content of A');
+  });
+
+  it('appends to section content under a heading', async () => {
+    await mcp.call('vault_patch', {
+      path: 'note.md',
+      heading: '## Section A',
+      mode: 'append',
+      content: '\nAppended line.',
+    });
+    expect(capturedContent).toContain('Content of A.\n\nAppended line.');
+  });
+
+  it('prepends to section content under a heading', async () => {
+    await mcp.call('vault_patch', {
+      path: 'note.md',
+      heading: '## Section A',
+      mode: 'prepend',
+      content: 'Prepended line.\n\n',
+    });
+    expect(capturedContent).toContain('## Section A\n\nPrepended line.\n\nContent of A.');
+  });
+
+  it('returns HEADING_NOT_FOUND for missing heading', async () => {
+    const result = await mcp.call('vault_patch', {
+      path: 'note.md',
+      heading: '## Nonexistent',
+      mode: 'replace',
+      content: 'x',
+    }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.error.code).toBe('HEADING_NOT_FOUND');
+  });
+});

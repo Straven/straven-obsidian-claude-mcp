@@ -62,6 +62,60 @@ export function errorResponse(err: VaultError) {
   };
 }
 
+// ─── patchSection ─────────────────────────────────────────────────────────────
+
+/**
+ * Splice content into the section beneath a heading.
+ * Heading must be the full line including # prefix (e.g. `## My Heading`).
+ * Exact match, case-sensitive.
+ * Section ends at the next heading of same or higher level (fewer #), or EOF.
+ * Returns the new full document string.
+ */
+export function patchSection(
+  doc: string,
+  heading: string,
+  mode: 'replace' | 'append' | 'prepend',
+  content: string,
+): string {
+  const lines = doc.split('\n');
+  const headingLevel = heading.match(/^(#+)/)?.[1].length ?? 0;
+
+  // Find the heading line index (exact match of the full heading string)
+  const headingIdx = lines.findIndex(
+    (l) => l === heading || l.replace(/\s+$/, '') === heading,
+  );
+  if (headingIdx === -1) throw new VaultError('HEADING_NOT_FOUND', `Heading not found: ${heading}`);
+
+  // Find the end of the section (next heading at same or higher level)
+  let sectionEnd = lines.length;
+  for (let i = headingIdx + 1; i < lines.length; i++) {
+    const match = lines[i].match(/^(#+)\s/);
+    if (match && match[1].length <= headingLevel) {
+      sectionEnd = i;
+      break;
+    }
+  }
+
+  // Split document into parts
+  const headingPart = lines.slice(0, headingIdx + 1).join('\n');
+  const bodyLines = lines.slice(headingIdx + 1, sectionEnd);
+  const afterPart = lines.slice(sectionEnd).join('\n');
+  const body = bodyLines.join('\n');
+
+  let newBody: string;
+  if (mode === 'replace') {
+    newBody = '\n\n' + content.replace(/^\n+/, '').replace(/\n+$/, '') + '\n';
+  } else if (mode === 'append') {
+    newBody = body + content;
+  } else {
+    // prepend: place content (preserving its trailing newlines) before existing body text
+    newBody = '\n\n' + content + body.replace(/^\n+/, '');
+  }
+
+  const separator = afterPart.length > 0 ? '\n' : '';
+  return headingPart + newBody + separator + afterPart;
+}
+
 // ─── NotesTools class ─────────────────────────────────────────────────────────
 
 export class NotesTools {
@@ -249,6 +303,34 @@ export class NotesTools {
           const existing = await this.app.vault.read(file);
           await this.app.vault.modify(file, existing + content);
           return { content: [{ type: 'text' as const, text: JSON.stringify({ path: filePath, appended: true }) }] };
+        } catch (e) {
+          return errorResponse(wrap(e));
+        }
+      },
+    );
+
+    // vault_patch
+    mcp.tool(
+      'vault_patch',
+      'Edit content under a specific heading. Modes: replace (overwrite section body), append (add after), prepend (add before).',
+      {
+        path: z.string().describe('Vault-relative path'),
+        heading: z.string().describe('Full heading line including # prefix, e.g. "## My Heading"'),
+        mode: z.enum(['replace', 'append', 'prepend']).describe('How to apply the content change'),
+        content: z.string().describe('Content to apply'),
+      },
+      async ({ path: rawPath, heading, mode, content }: { path: string; heading: string; mode: 'replace' | 'append' | 'prepend'; content: string }) => {
+        try {
+          const filePath = resolvePath(rawPath);
+          const abstract = this.app.vault.getAbstractFileByPath(filePath);
+          if (!abstract || !('extension' in abstract)) {
+            throw new VaultError('FILE_NOT_FOUND', `File not found: ${filePath}`);
+          }
+          const file = abstract as TFile;
+          const doc = await this.app.vault.read(file);
+          const newDoc = patchSection(doc, heading, mode, content);
+          await this.app.vault.modify(file, newDoc);
+          return { content: [{ type: 'text' as const, text: JSON.stringify({ path: filePath, patched: true }) }] };
         } catch (e) {
           return errorResponse(wrap(e));
         }
