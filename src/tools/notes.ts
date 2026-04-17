@@ -229,5 +229,30 @@ export class NotesTools {
         }
       },
     );
+
+    // vault_append
+    mcp.tool(
+      'vault_append',
+      'Append content to the end of an existing note.',
+      {
+        path: z.string().describe('Vault-relative path'),
+        content: z.string().describe('Content to append'),
+      },
+      async ({ path: rawPath, content }: { path: string; content: string }) => {
+        try {
+          const filePath = resolvePath(rawPath);
+          const abstract = this.app.vault.getAbstractFileByPath(filePath);
+          if (!abstract || !('extension' in abstract)) {
+            throw new VaultError('FILE_NOT_FOUND', `File not found: ${filePath}`);
+          }
+          const file = abstract as TFile;
+          const existing = await this.app.vault.read(file);
+          await this.app.vault.modify(file, existing + content);
+          return { content: [{ type: 'text' as const, text: JSON.stringify({ path: filePath, appended: true }) }] };
+        } catch (e) {
+          return errorResponse(wrap(e));
+        }
+      },
+    );
   }
 }

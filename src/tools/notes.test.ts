@@ -308,3 +308,43 @@ describe('vault_search', () => {
     expect(data.truncated).toBe(true);
   });
 });
+
+describe('vault_append', () => {
+  let app: App;
+  let mcp: ReturnType<typeof makeMcp>;
+  let capturedContent: string;
+
+  beforeEach(() => {
+    capturedContent = '';
+    app = {
+      vault: {
+        getFolderByPath: vi.fn(),
+        getAbstractFileByPath: vi.fn((p: string) => (p === 'note.md' ? mockFile('note.md') : null)),
+        getFiles: vi.fn(),
+        read: vi.fn(async () => '# Existing\n\nContent here'),
+        create: vi.fn(),
+        modify: vi.fn(async (_f: TFile, c: string) => { capturedContent = c; }),
+        delete: vi.fn(),
+        adapter: { read: vi.fn(), write: vi.fn() },
+      },
+      metadataCache: { getFileCache: vi.fn(), on: vi.fn() },
+      fileManager: { processFrontMatter: vi.fn() },
+    } as unknown as App;
+    mcp = makeMcp();
+    new NotesTools(app).register(mcp as unknown as McpServer);
+  });
+
+  it('appends content to file', async () => {
+    const result = await mcp.call('vault_append', { path: 'note.md', content: '\n## New Section\n\nAdded text' }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.path).toBe('note.md');
+    expect(capturedContent).toContain('# Existing');
+    expect(capturedContent).toContain('## New Section');
+  });
+
+  it('returns FILE_NOT_FOUND for missing note', async () => {
+    const result = await mcp.call('vault_append', { path: 'missing.md', content: 'x' }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.error.code).toBe('FILE_NOT_FOUND');
+  });
+});
