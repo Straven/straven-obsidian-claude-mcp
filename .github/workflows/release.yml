@@ -1,9 +1,8 @@
-name: Release
+name: Build Release Assets
 
 on:
-  push:
-    tags:
-      - '[0-9]+.[0-9]+.[0-9]+'
+  release:
+    types: [created]
 
 permissions:
   contents: write
@@ -23,7 +22,7 @@ jobs:
 
       - run: npm run build
 
-      - name: Create release
+      - name: Upload assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
