@@ -427,4 +427,15 @@ Content of B.
     const data = JSON.parse(result.content[0].text);
     expect(data.error.code).toBe('HEADING_NOT_FOUND');
   });
+
+  it('is case-sensitive — wrong case returns HEADING_NOT_FOUND', async () => {
+    const result = await mcp.call('vault_patch', {
+      path: 'note.md',
+      heading: '## section a',  // lowercase — doc has "## Section A"
+      mode: 'replace',
+      content: 'x',
+    }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.error.code).toBe('HEADING_NOT_FOUND');
+  });
 });
