@@ -1,4 +1,4 @@
-# straven-mcp
+# straven-obsidian-mcp
 
 Obsidian community plugin that runs a local HTTP+SSE MCP server. Replaces `mcp-obsidian` entirely — gives Claude full vault access: notes, canvas, and (phase 2) bases.
 
@@ -113,12 +113,12 @@ path traversal → INVALID_PATH, port conflict → Notice called, `onunload()` �
 
 ```json
 {
-  "id": "straven-mcp",
-  "name": "Straven MCP",
+  "id": "straven-obsidian-mcp",
+  "name": "Straven Obsidian MCP",
   "version": "0.1.0",
   "minAppVersion": "1.7.0",
-  "description": "MCP server for Claude — notes, canvas, and bases",
-  "author": "mykolasarry",
+  "description": "Connect Claude to your Obsidian vault via MCP — read, write, and organize notes and canvases",
+  "author": "Straven",
   "isDesktopOnly": true
 }
 ```

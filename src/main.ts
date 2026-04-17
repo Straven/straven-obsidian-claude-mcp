@@ -3,11 +3,11 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import * as http from 'http';
 
-export default class StravenmcpPlugin extends Plugin {
+export default class StravenObsidianMcpPlugin extends Plugin {
 	private httpServer: http.Server | null = null;
 
 	async onload() {
-		const mcp = new McpServer({ name: 'straven-mcp', version: '0.1.0' });
+		const mcp = new McpServer({ name: 'straven-obsidian-mcp', version: '0.1.0' });
 
 		mcp.tool('ping', 'Check if the MCP server is alive', {}, async () => ({
 			content: [{ type: 'text' as const, text: JSON.stringify({ result: 'pong' }) }],
@@ -40,14 +40,14 @@ export default class StravenmcpPlugin extends Plugin {
 
 		this.httpServer.on('error', (err: NodeJS.ErrnoException) => {
 			if (err.code === 'EADDRINUSE') {
-				new Notice('straven-mcp: port 27124 is already in use. Disable another plugin using that port.');
+				new Notice('straven-obsidian-mcp: port 27124 is already in use. Disable another plugin using that port.');
 			} else {
-				new Notice(`straven-mcp: server error — ${err.message}`);
+				new Notice(`straven-obsidian-mcp: server error — ${err.message}`);
 			}
 		});
 
 		this.httpServer.listen(27124, '127.0.0.1', () => {
-			console.log('straven-mcp: listening on http://127.0.0.1:27124');
+			console.log('straven-obsidian-mcp: listening on http://127.0.0.1:27124');
 		});
 	}
 

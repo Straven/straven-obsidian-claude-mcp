@@ -1,4 +1,4 @@
-# Straven MCP
+# Straven Obsidian MCP
 
 An Obsidian community plugin that runs a local MCP (Model Context Protocol) server, giving Claude direct access to your vault — notes, canvas, and (coming soon) bases.
 
@@ -21,7 +21,7 @@ Requires [BRAT](https://github.com/TfTHacker/obsidian42-brat).
 
 1. Install BRAT from Obsidian community plugins
 2. BRAT → "Add Beta plugin" → `Straven/straven-obsidian-claude-mcp`
-3. Enable **Straven MCP** in community plugins
+3. Enable **Straven Obsidian MCP** in community plugins
 
 ## MCP Client Config
 
@@ -81,7 +81,7 @@ npm test        # vitest
 
 **Install into Obsidian:**
 ```bash
-cp main.js manifest.json "<vault>/.obsidian/plugins/straven-mcp/"
+cp main.js manifest.json "<vault>/.obsidian/plugins/straven-obsidian-mcp/"
 ```
 
 **Release workflow:** commits follow [Conventional Commits](https://www.conventionalcommits.org/). Push to `main` → release-please opens a Release PR → merge it → GitHub release is created → BRAT picks it up automatically.
