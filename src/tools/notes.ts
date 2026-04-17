@@ -92,5 +92,30 @@ export class NotesTools {
         }
       },
     );
+
+    // vault_read
+    mcp.tool(
+      'vault_read',
+      'Read a file from the vault. Returns content and frontmatter properties.',
+      { path: z.string().describe('Vault-relative path, e.g. "Projects/note.md"') },
+      async ({ path: rawPath }: { path: string }) => {
+        try {
+          const filePath = resolvePath(rawPath);
+          const abstract = this.app.vault.getAbstractFileByPath(filePath);
+          if (!abstract || !('extension' in abstract)) {
+            throw new VaultError('FILE_NOT_FOUND', `File not found: ${filePath}`);
+          }
+          const file = abstract as TFile;
+          const content = await this.app.vault.read(file);
+          const cache = this.app.metadataCache.getFileCache(file);
+          const frontmatter = cache?.frontmatter ?? {};
+          return {
+            content: [{ type: 'text' as const, text: JSON.stringify({ path: filePath, content, frontmatter }) }],
+          };
+        } catch (e) {
+          return errorResponse(wrap(e));
+        }
+      },
+    );
   }
 }

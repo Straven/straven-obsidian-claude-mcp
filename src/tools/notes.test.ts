@@ -89,3 +89,46 @@ describe('vault_list', () => {
     expect(data.error.code).toBe('FOLDER_NOT_FOUND');
   });
 });
+
+// ── vault_read ────────────────────────────────────────────────────────────────
+
+describe('vault_read', () => {
+  let app: App;
+  let mcp: ReturnType<typeof makeMcp>;
+
+  beforeEach(() => {
+    app = {
+      vault: {
+        getFolderByPath: vi.fn(),
+        getAbstractFileByPath: vi.fn((p: string) => (p === 'note.md' ? mockFile('note.md') : null)),
+        getFiles: vi.fn(),
+        read: vi.fn(async () => '---\ntitle: Test\n---\n\n# Hello\n\nWorld'),
+        create: vi.fn(),
+        modify: vi.fn(),
+        delete: vi.fn(),
+        adapter: { read: vi.fn(), write: vi.fn() },
+      },
+      metadataCache: {
+        getFileCache: vi.fn((_f: TFile) => ({ frontmatter: { title: 'Test' } })),
+        on: vi.fn(),
+      },
+      fileManager: { processFrontMatter: vi.fn() },
+    } as unknown as App;
+    mcp = makeMcp();
+    new NotesTools(app).register(mcp as unknown as McpServer);
+  });
+
+  it('returns content and frontmatter', async () => {
+    const result = await mcp.call('vault_read', { path: 'note.md' }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.path).toBe('note.md');
+    expect(data.content).toContain('# Hello');
+    expect(data.frontmatter).toEqual({ title: 'Test' });
+  });
+
+  it('returns FILE_NOT_FOUND for missing file', async () => {
+    const result = await mcp.call('vault_read', { path: 'missing.md' }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.error.code).toBe('FILE_NOT_FOUND');
+  });
+});
