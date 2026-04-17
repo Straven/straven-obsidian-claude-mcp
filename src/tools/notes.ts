@@ -195,25 +195,31 @@ export class NotesTools {
           const lowerQuery = query.toLowerCase();
           const matches: { path: string; excerpt: string }[] = [];
           let truncated = false;
+          let aborted = false;
 
-          const searchPromise = (async () => {
+          const timeoutHandle = setTimeout(() => {
+            truncated = true;
+            aborted = true;
+          }, timeout_ms);
+
+          try {
             for (const file of files) {
+              if (aborted) break;
               const content = await this.app.vault.read(file);
-              if (content.toLowerCase().includes(lowerQuery)) {
-                const idx = content.toLowerCase().indexOf(lowerQuery);
+              if (aborted) break;
+              const lowerContent = content.toLowerCase();
+              if (lowerContent.includes(lowerQuery)) {
+                const idx = lowerContent.indexOf(lowerQuery);
                 const start = Math.max(0, idx - 60);
                 const end = Math.min(content.length, idx + query.length + 60);
-                matches.push({ path: file.path, excerpt: content.slice(start, end).trim() });
+                const excerpt = content.slice(start, end).trim();
+                matches.push({ path: file.path, excerpt });
                 if (matches.length >= 20) { truncated = true; break; }
               }
             }
-          })();
-
-          const timeoutPromise = new Promise<void>((resolve) =>
-            setTimeout(() => { truncated = true; resolve(); }, timeout_ms),
-          );
-
-          await Promise.race([searchPromise, timeoutPromise]);
+          } finally {
+            clearTimeout(timeoutHandle);
+          }
 
           return {
             content: [{ type: 'text' as const, text: JSON.stringify({ query, matches, truncated }) }],

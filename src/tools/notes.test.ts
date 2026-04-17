@@ -296,4 +296,15 @@ describe('vault_search', () => {
     const data = JSON.parse(result.content[0].text);
     expect(data.matches).toHaveLength(0);
   });
+
+  it('truncates results when 20 files match', async () => {
+    // Create 22 files that all match
+    const manyFiles = Array.from({ length: 22 }, (_, i) => mockFile(`file${i}.md`));
+    (app.vault.getFiles as ReturnType<typeof vi.fn>).mockReturnValue(manyFiles);
+    (app.vault.read as ReturnType<typeof vi.fn>).mockResolvedValue('apple content here');
+    const result = await mcp.call('vault_search', { query: 'apple', timeout_ms: 5000 }) as { content: { text: string }[] };
+    const data = JSON.parse(result.content[0].text);
+    expect(data.matches).toHaveLength(20);
+    expect(data.truncated).toBe(true);
+  });
 });
