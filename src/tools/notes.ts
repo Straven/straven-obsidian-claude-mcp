@@ -68,6 +68,29 @@ export class NotesTools {
   constructor(private readonly app: App) {}
 
   register(mcp: McpServer): void {
-    // tools will be registered here in subsequent tasks
+    // vault_list
+    mcp.tool(
+      'vault_list',
+      'List files and folders at a vault path. Use path="" for vault root.',
+      { path: z.string().default('').describe('Vault-relative path, e.g. "Projects" or ""') },
+      async ({ path: rawPath }: { path: string }) => {
+        try {
+          const folderPath = rawPath === '/' ? '' : (rawPath ?? '');
+          const resolved =
+            this.app.vault.getFolderByPath(folderPath) ??
+            (folderPath === '' ? this.app.vault.getFolderByPath('/') : null);
+          if (!resolved) throw new VaultError('FOLDER_NOT_FOUND', `Folder not found: ${rawPath}`);
+          const items = resolved.children.map((child) => ({
+            name: child.path.split('/').pop() ?? child.path,
+            type: 'extension' in child ? 'file' : 'folder',
+          }));
+          return {
+            content: [{ type: 'text' as const, text: JSON.stringify({ path: folderPath, items }) }],
+          };
+        } catch (e) {
+          return errorResponse(wrap(e));
+        }
+      },
+    );
   }
 }
