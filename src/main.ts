@@ -2,6 +2,7 @@ import { Notice, Plugin } from 'obsidian';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import * as http from 'http';
+import { NotesTools } from './tools/notes';
 
 export default class StravenObsidianMcpPlugin extends Plugin {
 	private httpServer: http.Server | null = null;
@@ -12,6 +13,8 @@ export default class StravenObsidianMcpPlugin extends Plugin {
 		mcp.tool('ping', 'Check if the MCP server is alive', {}, async () => ({
 			content: [{ type: 'text' as const, text: JSON.stringify({ result: 'pong' }) }],
 		}));
+
+		new NotesTools(this.app).register(mcp);
 
 		const transports = new Map<string, SSEServerTransport>();
 
