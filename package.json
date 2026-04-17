@@ -1,0 +1,24 @@
+{
+  "name": "straven-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Claude — notes, canvas, and bases",
+  "main": "main.js",
+  "scripts": {
+    "build": "node esbuild.config.mjs production",
+    "dev": "node esbuild.config.mjs",
+    "test": "vitest run"
+  },
+  "author": "mykolasarry",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.24.0",
+    "obsidian": "latest",
+    "typescript": "^5.6.0",
+    "vitest": "^2.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.0"
+  }
+}
